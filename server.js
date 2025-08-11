@@ -1,61 +1,55 @@
-const app = require("express")();
-const bodyParser = require("body-parser");
+const express = require("express");
 const fetch = require("node-fetch");
-const fs = require("fs");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+const app = express();
 const PORT = 3000;
 
-globalThis.fetch = fetch;
-globalThis.Headers = fetch.Headers
-globalThis.Request = fetch.Request
-globalThis.Response = fetch.Response
-
-app.use(bodyParser.json());
-
-const {
-    GoogleGenerativeAI,
-    HarmCategory,
-    HarmBlockThreshold
-} = require("@google/generative-ai");
-const { response } = require("express");
+app.use(express.json());
 
 const apikey = process.env.API_KEY;
+if (!apikey) {
+    console.error("Missing API_KEY in environment variables");
+    process.exit(1);
+}
+
 const genai = new GoogleGenerativeAI(apikey);
 
-const generationconfig = {
+const generationConfig = {
     temperature: 0,
     topP: 0.95,
     topK: 64,
     responseMimeType: "text/plain"
-}
+};
 
-async function run(prompt,history){
+async function run(prompt, history) {
     try {
-        const model = genai.getGenerativeModel({
-            model: "gemini-1.5-flash",
-        })
+        const model = genai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const chattsession = model.startChat({
+        const chatSession = model.startChat({
             generationConfig,
-            history: history,
-        })
+            history
+        });
 
-        const result = await chattsession.sendMessage(prompt);
-        return {response: true, Text: result.response.text()};
+        const result = await chatSession.sendMessage(prompt);
+        return { response: true, text: await result.response.text() };
     } catch (error) {
         console.error("Error occurred while generating response:", error);
-        return {response: false, error: error.message};
+        return { response: false, error: error.message };
     }
 }
 
-app.post("/",async (req, res) => {
-    const prompt = req.body.prompt;
-    const history = req.body.history;
+app.post("/", async (req, res) => {
+    const { prompt, history } = req.body;
 
-    const response = await run(prompt, history);
+    if (!prompt) {
+        return res.status(400).json({ error: "Missing 'prompt' in request body" });
+    }
 
-    if (response.response == true){
-        res.status(200).send(response.Text);
+    const response = await run(prompt, history || []);
+
+    if (response.response) {
+        res.status(200).send(response.text);
     } else {
         res.status(500).send(response.error);
     }
