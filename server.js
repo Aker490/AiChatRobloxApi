@@ -24,7 +24,7 @@ const generationConfig = {
 
 async function run(prompt, history) {
     try {
-        const model = genai.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const chatSession = model.startChat({
             generationConfig,
@@ -58,3 +58,4 @@ app.post("/", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
